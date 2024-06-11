@@ -1,0 +1,69 @@
+########     ###    ########  ######## ####
+##     ##   ## ##   ##     ## ##        ##
+##     ##  ##   ##  ##     ## ##        ##
+########  ##     ## ########  ######    ##
+##     ## ######### ##   ##   ##        ##
+##     ## ##     ## ##    ##  ##        ##
+########  ##     ## ##     ## ##       ####
+=============================================
+Command line file uploader for hidan.co
+
+
+USAGE
+-----
+- Anonymous upload  - "./barfi path/to/file.txt"
+- User upload       - "./barfi --dir=directoryId --token=userId path/to/file.txt"
+- Silent upload     - "./barfi --silent path/to/file.txt"
+
+THE API
+-------
+1. Initialization: The uploader sends an initialization request to the server to get an upload ID and signed URLs for each chunk.
+2. Chunk Upload: The file is divided into chunks(fixed 5 GB), and each chunk is uploaded to the server using the signed URLs.
+3. Completion: Once all chunks are uploaded, a completion request is sent to the server to finalize the upload.
+
+Example payloads:
+
+Initialization Request:
+POST /f/
+    {
+       "name": "example.txt",
+       "size": 10485760 // 10MB
+    }
+
+Initialization Response:
+    {
+       "uploadId": "12345",
+       "uploadUrls": [
+         "https://example.com/upload/part1",
+         "https://example.com/upload/part2",
+         ...
+       ]
+    }
+
+--------------------------------------------
+
+Chunk Upload Request (one for each chunk):
+PUT https://example.com/upload/part1
+    [chunk data]
+
+Chunk Upload Response:
+    HTTP 200 OK
+    Headers: {"ETag": "etag_value"}
+
+--------------------------------------------
+
+Completion Request:
+POST /f/12345
+{
+   "directoryId": "directory_id (optional for anonymous upload)",
+   "parts": [
+     {"ETag": "etag_value", "PartNumber": 1},
+     {"ETag": "etag_value", "PartNumber": 2},
+     ...
+   ]
+}
+
+Completion Response:
+{
+   "id": "final_file_id"
+}
