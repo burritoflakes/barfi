@@ -10,7 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var endpoint = "https://hidan.co"
+var endpoint = "https://hidan.sh"
 
 var (
 	token          = flag.String("token", "", "auth token of account")
