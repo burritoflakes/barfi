@@ -6,64 +6,94 @@
 ##     ## ##     ## ##    ##  ##        ##
 ########  ##     ## ##     ## ##       ####
 =============================================
-Command line file uploader for hidan.sh
+Command line file uploader for buzzheavier
+
+
+INSTALL
+-------
+go install github.com/burritoflakes/barfi@latest
+
+Or build from source:
+git clone https://github.com/burritoflakes/barfi
+cd barfi && CGO_ENABLED=0 go build -ldflags="-s -w" -o barfi ./
+
+Pre-built binaries are provided for Linux only (amd64, arm64, 386).
+For macOS and Windows, build from source using the commands above.
+
+
+SETUP
+-----
+barfi --config set server https://bzzhr.co
+barfi --config set token YOUR_TOKEN
+barfi --config set workers 5
+barfi --config show
 
 
 USAGE
 -----
-- Anonymous upload  - "./barfi path/to/file.txt"
-- User upload       - "./barfi --dir=directoryId --token=userId path/to/file.txt"
-- Silent upload     - "./barfi --silent path/to/file.txt"
+Upload a file:
+  ./barfi path/to/file.txt
 
-THE API
--------
-1. Initialization: The uploader sends an initialization request to the server to get an upload ID and signed URLs for each chunk.
-2. Chunk Upload: The file is divided into chunks(fixed 5 GB), and each chunk is uploaded to the server using the signed URLs.
-3. Completion: Once all chunks are uploaded, a completion request is sent to the server to finalize the upload.
+Upload to a directory:
+  ./barfi --parent-id=directoryId path/to/file.txt
 
-Example payloads:
+Upload via guest link:
+  ./barfi --guest-upload-link-id=linkId path/to/file.txt
 
-Initialization Request:
-POST /f/
-    {
-       "name": "example.txt",
-       "size": 10485760 // 10MB
-    }
+Upload with a note:
+  ./barfi --note="draft cut" path/to/file.txt
 
-Initialization Response:
-    {
-       "uploadId": "12345",
-       "uploadUrls": [
-         "https://example.com/upload/part1",
-         "https://example.com/upload/part2",
-         ...
-       ]
-    }
+Quiet mode (link only on stdout):
+  ./barfi -q path/to/file.txt
 
---------------------------------------------
+JSON output (raw server response):
+  ./barfi --json path/to/file.txt
 
-Chunk Upload Request (one for each chunk):
-PUT https://example.com/upload/part1
-    [chunk data]
+Override part size:
+  ./barfi --part-size=25MB path/to/file.txt
 
-Chunk Upload Response:
-    HTTP 200 OK
-    Headers: {"ETag": "etag_value"}
+Override workers:
+  ./barfi -j 10 path/to/file.txt
 
---------------------------------------------
+Capture link in a script:
+  LINK=$(./barfi -q path/to/file.txt)
 
-Completion Request:
-POST /f/12345
-{
-   "directoryId": "directory_id (optional for anonymous upload)",
-   "parts": [
-     {"ETag": "etag_value", "PartNumber": 1},
-     {"ETag": "etag_value", "PartNumber": 2},
-     ...
-   ]
-}
 
-Completion Response:
-{
-   "id": "final_file_id"
-}
+FLAGS
+-----
+--server URL               Server base URL (env: BARFI_SERVER)
+--token T                  Bearer token (env: BARFI_TOKEN)
+-l, --location-id ID       Storage bucket id (env: BARFI_LOCATION_ID)
+-d, --parent-id ID         Target directory (requires --token)
+    --guest-upload-link-id Guest upload link
+    --note TEXT            Note (max 500 chars)
+    --part-size BYTES      Override part size (e.g. 25MB, default 100MB)
+-j, --workers N            Parallel upload workers (default 5)
+    --save                 Persist current settings to config file
+    --config ACTION        Config management (show, set, unset)
+-q, --quiet                Suppress progress output
+    --json                 Print server response as JSON
+-h, --help                 Print help
+    --version              Print version
+
+
+CONFIG
+------
+Stored at ~/.config/barfi/config.json (mode 0600).
+
+  barfi --config show                        Show current config
+  barfi --config set server https://bzzhr.co Set a key
+  barfi --config set workers 10              Set workers
+  barfi --config unset token                 Remove a key
+
+Keys: server, token, locationId, parentId, workers
+
+Config precedence: flags > env vars > config file
+
+
+EXIT CODES
+----------
+0    Success
+1    Upload failed
+2    Usage error
+130  Interrupted (Ctrl+C)
