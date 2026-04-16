@@ -16,6 +16,14 @@ import (
 	"time"
 )
 
+func eprintf(format string, args ...any) {
+	_, _ = fmt.Fprintf(os.Stderr, format, args...)
+}
+
+func eprintln(args ...any) {
+	_, _ = fmt.Fprintln(os.Stderr, args...)
+}
+
 const version = "0.1.0"
 
 type cliOptions struct {
@@ -93,7 +101,6 @@ func resolveSettings(opts *cliOptions) (Config, error) {
 		}
 		cfg = loaded
 	}
-	// Env overrides.
 	if v := os.Getenv("BARFI_SERVER"); v != "" {
 		cfg.Server = v
 	}
@@ -103,7 +110,6 @@ func resolveSettings(opts *cliOptions) (Config, error) {
 	if v := os.Getenv("BARFI_LOCATION_ID"); v != "" {
 		cfg.LocationId = v
 	}
-	// Flag overrides.
 	if opts.server != "" {
 		cfg.Server = opts.server
 	}
@@ -126,7 +132,7 @@ func resolveSettings(opts *cliOptions) (Config, error) {
 }
 
 func printHelp() {
-	_, _ = fmt.Fprintln(os.Stderr, `Usage: barfi [flags] <file>
+	eprintln(`Usage: barfi [flags] <file>
 
 Flags:
   --server URL               BUS server base URL (env: BARFI_SERVER)
@@ -150,7 +156,7 @@ Config keys: server, token, locationId, parentId, workers`)
 func runCLI(args []string) int {
 	opts, err := parseFlags(args)
 	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, "barfi:", err)
+		eprintln("barfi:", err)
 		return 2
 	}
 	if opts.showHelp {
@@ -162,30 +168,28 @@ func runCLI(args []string) int {
 		return 0
 	}
 
-	// --config dispatches to config management and exits.
 	if opts.configAction != "" {
 		return runConfig(opts.configAction, opts.configArgs)
 	}
 
 	cfg, err := resolveSettings(opts)
 	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, "barfi:", err)
+		eprintln("barfi:", err)
 		return 2
 	}
 
-	// --save persists the resolved settings and optionally continues.
 	if opts.save {
 		path, perr := defaultConfigPath()
 		if perr != nil {
-			_, _ = fmt.Fprintln(os.Stderr, "barfi:", perr)
+			eprintln("barfi:", perr)
 			return 2
 		}
 		if err := saveConfig(path, cfg); err != nil {
-			_, _ = fmt.Fprintln(os.Stderr, "barfi:", err)
+			eprintln("barfi:", err)
 			return 2
 		}
 		if cfg.Token != "" && !opts.quiet {
-			_, _ = fmt.Fprintf(os.Stderr, "barfi: wrote token to %s (mode 0600)\n", path)
+			eprintf("barfi: wrote token to %s (mode 0600)\n", path)
 		}
 		if opts.file == "" {
 			return 0
@@ -193,23 +197,23 @@ func runCLI(args []string) int {
 	}
 
 	if opts.file == "" {
-		_, _ = fmt.Fprintln(os.Stderr, "barfi: no file argument (use --help for usage)")
+		eprintln("barfi: no file argument (use --help for usage)")
 		return 2
 	}
 	if cfg.Server == "" {
-		_, _ = fmt.Fprintln(os.Stderr, "barfi: --server not set (use a flag, BARFI_SERVER, or --save a config)")
+		eprintln("barfi: --server not set (use a flag, BARFI_SERVER, or --save a config)")
 		return 2
 	}
 
 	f, err := os.Open(opts.file)
 	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, "barfi:", err)
+		eprintln("barfi:", err)
 		return 2
 	}
 	defer f.Close()
 	st, err := f.Stat()
 	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, "barfi:", err)
+		eprintln("barfi:", err)
 		return 2
 	}
 
@@ -217,18 +221,18 @@ func runCLI(args []string) int {
 	if opts.partSizeStr != "" {
 		n, perr := parseSize(opts.partSizeStr)
 		if perr != nil {
-			_, _ = fmt.Fprintln(os.Stderr, "barfi:", perr)
+			eprintln("barfi:", perr)
 			return 2
 		}
 		if n < MinPartSize {
 			if !opts.quiet {
-				_, _ = fmt.Fprintf(os.Stderr, "barfi: --part-size %s below minimum, using %s\n", opts.partSizeStr, humanSize(MinPartSize))
+				eprintf("barfi: --part-size %s below minimum, using %s\n", opts.partSizeStr, humanSize(MinPartSize))
 			}
 			n = MinPartSize
 		}
 		if n > MaxPartSize {
 			if !opts.quiet {
-				_, _ = fmt.Fprintf(os.Stderr, "barfi: --part-size %s above maximum, using %s\n", opts.partSizeStr, humanSize(MaxPartSize))
+				eprintf("barfi: --part-size %s above maximum, using %s\n", opts.partSizeStr, humanSize(MaxPartSize))
 			}
 			n = MaxPartSize
 		}
@@ -242,27 +246,25 @@ func runCLI(args []string) int {
 	fileName := filepathBase(opts.file)
 	server := strings.TrimRight(cfg.Server, "/")
 
-	// Resolve final part size for the settings printout.
 	effectivePartSize := partSize
 	if effectivePartSize == 0 {
 		effectivePartSize = calcPartSize(fileSize)
 	}
 	totalParts := (fileSize + effectivePartSize - 1) / effectivePartSize
 
-	// Print upload settings before starting.
 	if !opts.quiet {
-		_, _ = fmt.Fprintf(os.Stderr, "file:        %s (%s)\n", fileName, humanSize(fileSize))
-		_, _ = fmt.Fprintf(os.Stderr, "server:      %s\n", server)
-		_, _ = fmt.Fprintf(os.Stderr, "parts:       %d x %s\n", totalParts, humanSize(effectivePartSize))
-		_, _ = fmt.Fprintf(os.Stderr, "workers:     %d\n", cfg.Workers)
+		eprintf("file:        %s (%s)\n", fileName, humanSize(fileSize))
+		eprintf("server:      %s\n", server)
+		eprintf("parts:       %d x %s\n", totalParts, humanSize(effectivePartSize))
+		eprintf("workers:     %d\n", cfg.Workers)
 		if opts.parentId != "" {
-			_, _ = fmt.Fprintf(os.Stderr, "directory:   %s\n", opts.parentId)
+			eprintf("directory:   %s\n", opts.parentId)
 		}
 		if opts.guestLink != "" {
-			_, _ = fmt.Fprintf(os.Stderr, "guest link:  %s\n", opts.guestLink)
+			eprintf("guest link:  %s\n", opts.guestLink)
 		}
 		if cfg.LocationId != "" {
-			_, _ = fmt.Fprintf(os.Stderr, "location:    %s\n", cfg.LocationId)
+			eprintf("location:    %s\n", cfg.LocationId)
 		}
 	}
 
@@ -294,7 +296,7 @@ func runCLI(args []string) int {
 		if secs := elapsed.Seconds(); secs > 0 {
 			avgSpeed = humanSize(int64(float64(u.fileSize)/secs)) + "/s"
 		}
-		_, _ = fmt.Fprintf(os.Stderr, "uploaded %s (%s) in %s (%s)\n",
+		eprintf("uploaded %s (%s) in %s (%s)\n",
 			u.fileName, humanSize(u.fileSize), elapsed.Round(time.Second), avgSpeed)
 	}
 	if opts.jsonOutput {
@@ -314,7 +316,7 @@ func runCLI(args []string) int {
 func runConfig(action string, args []string) int {
 	path, err := defaultConfigPath()
 	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, "barfi:", err)
+		eprintln("barfi:", err)
 		return 2
 	}
 
@@ -322,7 +324,7 @@ func runConfig(action string, args []string) int {
 	case "show":
 		cfg, err := loadConfig(path)
 		if err != nil {
-			_, _ = fmt.Fprintln(os.Stderr, "barfi:", err)
+			eprintln("barfi:", err)
 			return 1
 		}
 		data, _ := json.MarshalIndent(cfg, "", "  ")
@@ -331,46 +333,46 @@ func runConfig(action string, args []string) int {
 
 	case "set":
 		if len(args) != 2 {
-			_, _ = fmt.Fprintln(os.Stderr, "barfi: --config set requires <key> <value>")
+			eprintln("barfi: --config set requires <key> <value>")
 			return 2
 		}
 		cfg, err := loadConfig(path)
 		if err != nil {
-			_, _ = fmt.Fprintln(os.Stderr, "barfi:", err)
+			eprintln("barfi:", err)
 			return 1
 		}
 		if err := setConfigField(&cfg, args[0], args[1]); err != nil {
-			_, _ = fmt.Fprintln(os.Stderr, "barfi:", err)
+			eprintln("barfi:", err)
 			return 2
 		}
 		if err := saveConfig(path, cfg); err != nil {
-			_, _ = fmt.Fprintln(os.Stderr, "barfi:", err)
+			eprintln("barfi:", err)
 			return 1
 		}
 		return 0
 
 	case "unset":
 		if len(args) != 1 {
-			_, _ = fmt.Fprintln(os.Stderr, "barfi: --config unset requires <key>")
+			eprintln("barfi: --config unset requires <key>")
 			return 2
 		}
 		cfg, err := loadConfig(path)
 		if err != nil {
-			_, _ = fmt.Fprintln(os.Stderr, "barfi:", err)
+			eprintln("barfi:", err)
 			return 1
 		}
 		if err := setConfigField(&cfg, args[0], ""); err != nil {
-			_, _ = fmt.Fprintln(os.Stderr, "barfi:", err)
+			eprintln("barfi:", err)
 			return 2
 		}
 		if err := saveConfig(path, cfg); err != nil {
-			_, _ = fmt.Fprintln(os.Stderr, "barfi:", err)
+			eprintln("barfi:", err)
 			return 1
 		}
 		return 0
 
 	default:
-		_, _ = fmt.Fprintf(os.Stderr, "barfi: unknown config action %q (use show, set, or unset)\n", action)
+		eprintf("barfi: unknown config action %q (use show, set, or unset)\n", action)
 		return 2
 	}
 }
@@ -407,16 +409,16 @@ func setConfigField(cfg *Config, key, value string) error {
 func formatError(err error) int {
 	switch {
 	case errors.Is(err, context.Canceled):
-		_, _ = fmt.Fprintln(os.Stderr, "barfi: cancelled")
+		eprintln("barfi: cancelled")
 		return 130
 	case errors.Is(err, errExpired):
-		_, _ = fmt.Fprintln(os.Stderr, "barfi: upload session expired — start over")
+		eprintln("barfi: upload session expired — start over")
 		return 1
 	case errors.Is(err, errPartTooLarge):
-		_, _ = fmt.Fprintln(os.Stderr, "barfi: part exceeds server size limit (100 MB)")
+		eprintln("barfi: part exceeds server size limit (100 MB)")
 		return 1
 	default:
-		_, _ = fmt.Fprintln(os.Stderr, "barfi:", err)
+		eprintln("barfi:", err)
 		return 1
 	}
 }

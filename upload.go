@@ -17,7 +17,6 @@ import (
 	"time"
 )
 
-// Typed sentinel errors.
 var (
 	errExpired      = errors.New("upload session expired")
 	errPartTooLarge = errors.New("part exceeds server size limit")

@@ -169,7 +169,6 @@ type barProgress struct {
 	doneAck         chan struct{}
 	lastRenderWidth int // terminal width at the time of the last render
 
-	// Ring buffer for current-speed calculation.
 	speedRing [speedRingSize]speedSample
 	ringIdx   int
 	ringCount int
@@ -289,7 +288,6 @@ func (p *barProgress) renderOnce() {
 		stats += "  ETA " + formatETA(remaining)
 	}
 
-	// Bar fills the remaining terminal width.
 	// Layout: <name>  [<bar>]<stats>
 	// The brackets [ ] consume 2 chars from the available space.
 	barWidth := width - len([]rune(name)) - 2 - 2 - len([]rune(stats))

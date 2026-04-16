@@ -16,13 +16,11 @@ const (
 	MaxFileSize = 1024 * 1024 * 1024 * 1024 // 1 TB
 )
 
-// BUS protocol header names.
 const (
 	headerUploadLength     = "Upload-Length"
 	headerUploadPartNumber = "Upload-Part-Number"
 )
 
-// maxRetries bounds the per-part retry loop.
 const maxRetries = 5
 
 // calcPartSize returns the BUS part size to use for a given file size.
@@ -47,7 +45,6 @@ func parseSize(s string) (int64, error) {
 	if s == "" {
 		return 0, fmt.Errorf("empty size")
 	}
-	// Find the first non-digit to split number from suffix.
 	i := 0
 	for i < len(s) && s[i] >= '0' && s[i] <= '9' {
 		i++

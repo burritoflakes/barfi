@@ -23,7 +23,7 @@ For macOS and Windows, build from source using the commands above.
 
 SETUP
 -----
-barfi --config set server https://bzzhr.co
+barfi --config set server https://buzzheavier.com
 barfi --config set token YOUR_TOKEN
 barfi --config set workers 5
 barfi --config show
@@ -82,7 +82,7 @@ CONFIG
 Stored at ~/.config/barfi/config.json (mode 0600).
 
   barfi --config show                        Show current config
-  barfi --config set server https://bzzhr.co Set a key
+  barfi --config set server https://buzzheavier.com Set a key
   barfi --config set workers 10              Set workers
   barfi --config unset token                 Remove a key
 
