@@ -4,19 +4,20 @@ on:
   release:
     types: [created]
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   release-barfi:
     name: Release barfi binary
-    permissions:
-      contents: write
-      packages: write
     runs-on: ubuntu-latest
     strategy:
       matrix:
         goos: [linux]
         goarch: ["386", amd64, arm64]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: wangyoucao577/go-release-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -27,4 +28,5 @@ jobs:
           compress_assets: "OFF"
           md5sum: false
           ldflags: "-s -w"
+          goversion: "https://dl.google.com/go/go1.26.2.linux-amd64.tar.gz"
           asset_name: "barfi-${{ matrix.goos }}-${{ matrix.goarch }}"
